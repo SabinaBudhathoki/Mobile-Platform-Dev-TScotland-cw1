@@ -19,14 +19,26 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.graphics.Color;
+import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.EditText;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.Toast;
+import android.app.AlertDialog;
+import android.Manifest;
 import android.view.View.OnClickListener;
+import android.location.Location;
+import android.location.LocationManager;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -40,11 +52,24 @@ import java.net.URL;
 import java.net.HttpURLConnection;
 import java.util.Base64;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 
 public class MainActivity extends AppCompatActivity implements OnClickListener {
-    private TextView rawDataDisplay;
+    private ListView incidentsList;
+    private ListView roadworksList;
     private Button startButton;
+
+    // Stores the search box and search button
+    private EditText searchRoadInput;
+    private Button searchButton;
+    private ArrayList<Situation> incidentSituations = new ArrayList<>();
+    private ArrayList<Situation> roadworkSituations = new ArrayList<>();
+
+    //stores the user's current location
+    private Location userLocation;
+    private Button nearbyButton;
 
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     private String clientId;
@@ -60,6 +85,18 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+        // Check whether approximate location permission has been granted
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            // Ask the user for permission to access approximate location
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                    1
+            );
+        }
         //Read API credentials from AndroidManifest
         try {
             Bundle metaData = getPackageManager()
@@ -86,10 +123,37 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                     return insets;
                 }
         );
-
-        rawDataDisplay = findViewById(R.id.rawDataDisplay);
+        // Connect the layout views to the Java variables
+        incidentsList = findViewById(R.id.incidentsList);
+        roadworksList = findViewById(R.id.roadworksList);
         startButton = findViewById(R.id.startButton);
+
+        // Connect the search box and button to the layout
+        searchRoadInput = findViewById(R.id.searchRoadInput);
+        searchButton = findViewById(R.id.searchButton);
+
+        // Connect the nearby situations button to the layout
+        nearbyButton = findViewById(R.id.nearbyButton);
+
+        // Allow users to select an individual incident
+        incidentsList.setOnItemClickListener((parent, view, position, id) -> {
+            Situation selectedSituation = incidentSituations.get(position);
+            showSituationDetails(selectedSituation);
+        });
+
+        // Allow users to select an individual roadwork
+        roadworksList.setOnItemClickListener((parent, view, position, id) -> {
+            Situation selectedSituation = roadworkSituations.get(position);
+            showSituationDetails(selectedSituation);
+        });
+
         startButton.setOnClickListener(this);
+
+        // Run the road name search when the button is pressed
+        searchButton.setOnClickListener(v -> searchSituations());
+
+        // Find nearby traffic situations when the button is pressed
+        nearbyButton.setOnClickListener(v -> findNearbySituations());
     }
 
     public void onClick(View aview)
@@ -176,12 +240,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                     if (i >= 0) {
                         unplannedXml = unplannedXml.substring(i);
                     }
-
-                    ArrayList<Situation> situations = parser.parse(unplannedXml);
+                    //parse unplanned events and store them in the incident list
+                    incidentSituations = parser.parse(unplannedXml);
 
                     displayText.append("UNPLANNED EVENTS\n\n");
 
-                    for (Situation situation : situations) {
+                    // Go through each parsed unplanned incident
+                    for (Situation situation : incidentSituations) {
                         displayText.append("Type: ")
                                 .append(situation.getType())
                                 .append("\n");
@@ -223,11 +288,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                         currentRoadworkXml = currentRoadworkXml.substring(i);
                     }
 
-                    ArrayList<Situation> situations = parser.parse(currentRoadworkXml);
+                    //parse current roadworks and store them in the roadworks list
+                    roadworkSituations = parser.parse(currentRoadworkXml);
 
                     displayText.append("CURRENT ROADWORKS\n\n");
 
-                    for (Situation situation : situations) {
+                    // Go through each parsed roadwork
+                    for (Situation situation : roadworkSituations) {
 
                         displayText.append("Type: ")
                                 .append(situation.getType())
@@ -262,16 +329,270 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 Log.e("Parsing", "Could not parse current roadworks", e);
             }
 
-            MainActivity.this.runOnUiThread(new Runnable()
-            {
+            //update the incident and roadwork lists with the parsed situation descriptions
+            MainActivity.this.runOnUiThread(new Runnable() {
+                @Override
                 public void run() {
-                    Log.d("UI thread", "I am the UI thread");
-                    rawDataDisplay.setText(displayText.toString());
 
+                    ArrayList<String> incidentDescriptions = new ArrayList<>();
+                    ArrayList<String> roadworkDescriptions = new ArrayList<>();
+
+                    for (Situation situation : incidentSituations) {
+                        incidentDescriptions.add(
+                                situation.getType() + "\n" +
+                                        situation.getComment()
+                        );
+                    }
+
+                    for (Situation situation : roadworkSituations) {
+                        roadworkDescriptions.add(
+                                situation.getType() + "\n" +
+                                        situation.getComment()
+                        );
+                    }
+
+                    ArrayAdapter<String> incidentAdapter =
+                            new ArrayAdapter<>(
+                                    MainActivity.this,
+                                    android.R.layout.simple_list_item_1,
+                                    incidentDescriptions
+                            );
+
+                    // Create a colour-coded adapter for current roadworks
+                    ArrayAdapter<String> roadworkAdapter =
+                            createRoadworkAdapter(roadworkSituations);
+
+                    incidentsList.setAdapter(incidentAdapter);
+                    roadworksList.setAdapter(roadworkAdapter);
                 }
             });
         }
 
     }
+    // Display the selected situation's details in a dialog
+    private void showSituationDetails(Situation situation) {
 
+        String details =
+                "Type: " + situation.getType() +
+                        "\n\nDescription: " + situation.getComment() +
+                        "\n\nRoad: " + situation.getRoadName() +
+                        "\n\nStart time: " + situation.getStartTime() +
+                        "\n\nDelay: " + situation.getDelay() +
+                        "\n\nLatitude: " + situation.getLatitude() +
+                        "\nLongitude: " + situation.getLongitude();
+
+        new AlertDialog.Builder(this)
+                .setTitle("Situation Details")
+                .setMessage(details)
+                .setPositiveButton("Close", null)
+                .show();
+    }
+    // Search incidents and roadworks using the entered road name
+    private void searchSituations() {
+
+        String searchText = searchRoadInput.getText().toString()
+                .trim().toLowerCase();
+
+        ArrayList<String> filteredIncidents = new ArrayList<>();
+        ArrayList<String> filteredRoadworks = new ArrayList<>();
+
+        // Find incidents matching the road name
+        for (Situation situation : incidentSituations) {
+            if (situation.getRoadName() != null &&
+                    situation.getRoadName().toLowerCase().contains(searchText)) {
+
+                filteredIncidents.add(
+                        situation.getType() + "\n" + situation.getComment()
+                );
+            }
+        }
+
+        // Find roadworks matching the road name
+        for (Situation situation : roadworkSituations) {
+            if (situation.getRoadName() != null &&
+                    situation.getRoadName().toLowerCase().contains(searchText)) {
+
+                filteredRoadworks.add(
+                        situation.getType() + "\n" + situation.getComment()
+                );
+            }
+        }
+
+        // Display the matching results in both lists
+        incidentsList.setAdapter(new ArrayAdapter<>(
+                MainActivity.this,
+                android.R.layout.simple_list_item_1,
+                filteredIncidents
+        ));
+
+        roadworksList.setAdapter(new ArrayAdapter<>(
+                MainActivity.this,
+                android.R.layout.simple_list_item_1,
+                filteredRoadworks
+        ));
+    }
+    // Find traffic situations close to the user's location
+    private void findNearbySituations() {
+
+        // Check that location permission is available
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                    1
+            );
+            return;
+        }
+
+        // Retrieve the last known location
+        LocationManager locationManager =
+                (LocationManager) getSystemService(LOCATION_SERVICE);
+
+        try {
+            userLocation = locationManager.getLastKnownLocation(
+                    LocationManager.NETWORK_PROVIDER
+            );
+
+            // Try other enabled providers if network location is unavailable
+            if (userLocation == null) {
+                for (String provider : locationManager.getProviders(true)) {
+                    Location location =
+                            locationManager.getLastKnownLocation(provider);
+
+                    if (location != null &&
+                            (userLocation == null ||
+                                    location.getTime() > userLocation.getTime())) {
+                        userLocation = location;
+                    }
+                }
+            }
+
+        } catch (SecurityException e) {
+            Toast.makeText(this, "Location permission is required",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Check whether the device has a location available
+        if (userLocation == null) {
+            Toast.makeText(this,
+                    "Location unavailable. Please try again.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Collect situations within 50 kilometres
+        ArrayList<Situation> nearbySituations = new ArrayList<>();
+
+        for (Situation situation : incidentSituations) {
+            if (getDistance(situation) <= 50000) {
+                nearbySituations.add(situation);
+            }
+        }
+
+        for (Situation situation : roadworkSituations) {
+            if (getDistance(situation) <= 50000) {
+                nearbySituations.add(situation);
+            }
+        }
+
+        // Sort situations from nearest to furthest
+        Collections.sort(nearbySituations,
+                (first, second) ->
+                        Float.compare(getDistance(first), getDistance(second)));
+
+        if (nearbySituations.isEmpty()) {
+            Toast.makeText(this, "No nearby situations found",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Prepare the nearby situations for display
+        String[] descriptions = new String[nearbySituations.size()];
+
+        for (int i = 0; i < nearbySituations.size(); i++) {
+            Situation situation = nearbySituations.get(i);
+            float distance = getDistance(situation) / 1000;
+
+            descriptions[i] = situation.getType() +
+                    "\n" + situation.getRoadName() +
+                    "\n" + String.format("%.1f km away", distance);
+        }
+
+        // Display nearby situations and allow users to select one
+        new AlertDialog.Builder(this)
+                .setTitle("Nearby Traffic Situations")
+                .setItems(descriptions, (dialog, which) ->
+                        showSituationDetails(nearbySituations.get(which)))
+                .setPositiveButton("Close", null)
+                .show();
+    }
+
+    // Calculate the distance between the user and a traffic situation
+    private float getDistance(Situation situation) {
+
+        try {
+            double latitude = Double.parseDouble(situation.getLatitude());
+            double longitude = Double.parseDouble(situation.getLongitude());
+
+            float[] results = new float[1];
+
+            Location.distanceBetween(
+                    userLocation.getLatitude(),
+                    userLocation.getLongitude(),
+                    latitude,
+                    longitude,
+                    results
+            );
+
+            return results[0];
+
+        } catch (Exception e) {
+            return Float.MAX_VALUE;
+        }
+    }
+    // Display roadworks with colours based on their delay
+    private ArrayAdapter<String> createRoadworkAdapter(
+            ArrayList<Situation> situations) {
+
+        ArrayList<String> descriptions = new ArrayList<>();
+
+        for (Situation situation : situations) {
+            descriptions.add(
+                    situation.getType() + "\n" + situation.getComment()
+            );
+        }
+
+        return new ArrayAdapter<String>(
+                this,
+                android.R.layout.simple_list_item_1,
+                descriptions
+        ) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+
+                TextView textView = (TextView) super.getView(
+                        position, convertView, parent
+                );
+
+                // Set the text colour according to the delay
+                String delay = situations.get(position).getDelay();
+
+                if ("longDelays".equalsIgnoreCase(delay)) {
+                    textView.setTextColor(Color.RED);
+                } else if ("delays".equalsIgnoreCase(delay)) {
+                    textView.setTextColor(0xFFFF9800);
+                } else if ("noDelays".equalsIgnoreCase(delay)) {
+                    textView.setTextColor(Color.GREEN);
+                } else {
+                    textView.setTextColor(Color.BLACK);
+                }
+
+                return textView;
+            }
+        };
+    }
 }

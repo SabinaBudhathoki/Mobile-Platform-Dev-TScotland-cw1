@@ -15,7 +15,10 @@
 package com.example.s2366848;
 
 import android.content.pm.PackageManager;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -70,6 +73,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     //stores the user's current location
     private Location userLocation;
     private Button nearbyButton;
+    private Button mapButton;
+    // Schedule automatic traffic data updates
+    private Handler updateHandler = new Handler(Looper.getMainLooper());
+    private final long UPDATE_INTERVAL = 60 * 60 * 1000; // 1 hour
 
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     private String clientId;
@@ -135,6 +142,39 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Connect the nearby situations button to the layout
         nearbyButton = findViewById(R.id.nearbyButton);
 
+        // Open the Google Maps activity
+        mapButton = findViewById(R.id.mapButton);
+
+
+        mapButton.setOnClickListener(v -> {
+
+            // Create lists to hold traffic marker information
+            ArrayList<String> markerTitles = new ArrayList<>();
+            ArrayList<String> markerLatitudes = new ArrayList<>();
+            ArrayList<String> markerLongitudes = new ArrayList<>();
+
+            // Add incident locations
+            for (Situation situation : incidentSituations) {
+                addSituationToMap(situation, markerTitles,
+                        markerLatitudes, markerLongitudes);
+            }
+
+            // Add roadwork locations
+            for (Situation situation : roadworkSituations) {
+                addSituationToMap(situation, markerTitles,
+                        markerLatitudes, markerLongitudes);
+            }
+
+            // Open the map and pass the traffic information
+            Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+            intent.putStringArrayListExtra("markerTitles", markerTitles);
+            intent.putStringArrayListExtra("markerLatitudes", markerLatitudes);
+            intent.putStringArrayListExtra("markerLongitudes", markerLongitudes);
+
+            startActivity(intent);
+        });
+
+
         // Allow users to select an individual incident
         incidentsList.setOnItemClickListener((parent, view, position, id) -> {
             Situation selectedSituation = incidentSituations.get(position);
@@ -148,6 +188,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         });
 
         startButton.setOnClickListener(this);
+        // Automatically download traffic data when the app starts
+        startProgress();
+        // Schedule the next automatic update
+        updateHandler.postDelayed(automaticUpdate, UPDATE_INTERVAL);
 
         // Run the road name search when the button is pressed
         searchButton.setOnClickListener(v -> searchSituations());
@@ -351,12 +395,31 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                         );
                     }
 
+                    // Create an incident list adapter with matching icons
                     ArrayAdapter<String> incidentAdapter =
-                            new ArrayAdapter<>(
+                            new ArrayAdapter<String>(
                                     MainActivity.this,
                                     android.R.layout.simple_list_item_1,
                                     incidentDescriptions
-                            );
+                            ) {
+                                @Override
+                                public View getView(int position, View convertView, ViewGroup parent) {
+
+                                    TextView textView = (TextView) super.getView(
+                                            position, convertView, parent
+                                    );
+
+                                    // Display the icon for each incident
+                                    Situation situation = incidentSituations.get(position);
+                                    textView.setCompoundDrawablesWithIntrinsicBounds(
+                                            getSituationIcon(situation.getType()), 0, 0, 0
+                                    );
+
+                                    textView.setCompoundDrawablePadding(12);
+
+                                    return textView;
+                                }
+                            };
 
                     // Create a colour-coded adapter for current roadworks
                     ArrayAdapter<String> roadworkAdapter =
@@ -483,7 +546,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                     Toast.LENGTH_LONG).show();
             return;
         }
-
         // Collect situations within 50 kilometres
         ArrayList<Situation> nearbySituations = new ArrayList<>();
 
@@ -554,7 +616,38 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             return Float.MAX_VALUE;
         }
     }
-    // Display roadworks with colours based on their delay
+
+    // Select the correct icon for each traffic situation
+    private int getSituationIcon(String type) {
+
+        if (type == null) {
+            return R.drawable.general_warning;
+        }
+
+        String situationType = type.toLowerCase();
+
+        if (situationType.contains("accident")) {
+            return R.drawable.car_crash;
+
+        } else if (situationType.contains("vehicleobstruction")) {
+            return R.drawable.directions_car;
+
+        } else if (situationType.contains("maintenanceworks") ||
+                situationType.contains("roadworks")) {
+            return R.drawable.roadworks;
+
+        } else if (situationType.contains("abnormaltraffic") ||
+                situationType.contains("congestion")) {
+            return R.drawable.traffic_congestion;
+
+        } else if (situationType.contains("weather")) {
+            return R.drawable.weather;
+        }
+
+        return R.drawable.general_warning;
+    }
+
+    // Display roadworks with matching icons and delay colours
     private ArrayAdapter<String> createRoadworkAdapter(
             ArrayList<Situation> situations) {
 
@@ -565,7 +658,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                     situation.getType() + "\n" + situation.getComment()
             );
         }
-
         return new ArrayAdapter<String>(
                 this,
                 android.R.layout.simple_list_item_1,
@@ -578,8 +670,16 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                         position, convertView, parent
                 );
 
+                // Display the matching roadwork icon
+                Situation situation = situations.get(position);
+
+                textView.setCompoundDrawablesWithIntrinsicBounds(
+                        getSituationIcon(situation.getType()), 0, 0, 0
+                );
+                textView.setCompoundDrawablePadding(12);
+
                 // Set the text colour according to the delay
-                String delay = situations.get(position).getDelay();
+                String delay = situation.getDelay();
 
                 if ("longDelays".equalsIgnoreCase(delay)) {
                     textView.setTextColor(Color.RED);
@@ -595,4 +695,38 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             }
         };
     }
+
+    // Add a traffic situation to the map data if its coordinates are valid
+    private void addSituationToMap(
+            Situation situation,
+            ArrayList<String> titles,
+            ArrayList<String> latitudes,
+            ArrayList<String> longitudes) {
+
+        try {
+            double latitude = Double.parseDouble(situation.getLatitude());
+            double longitude = Double.parseDouble(situation.getLongitude());
+
+            if (latitude >= -90 && latitude <= 90 &&
+                    longitude >= -180 && longitude <= 180) {
+
+                titles.add(situation.getType() + ": " + situation.getComment());
+                latitudes.add(String.valueOf(latitude));
+                longitudes.add(String.valueOf(longitude));
+            }
+
+        } catch (Exception e) {
+            // Ignore situations with missing or invalid coordinates
+        }
+    }
+    // Refresh traffic data automatically at regular intervals
+    private final Runnable automaticUpdate = new Runnable() {
+        @Override
+        public void run() {
+            startProgress();
+
+            // Schedule the next update after one hour
+            updateHandler.postDelayed(this, UPDATE_INTERVAL);
+        }
+    };
 }

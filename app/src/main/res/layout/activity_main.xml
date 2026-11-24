@@ -41,6 +41,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Find Nearby Situations" />
+    <!-- Open the traffic situations map -->
+    <Button
+        android:id="@+id/mapButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Traffic Map" />
 
     <TextView
         android:id="@+id/acknowledgement"

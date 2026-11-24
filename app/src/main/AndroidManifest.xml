@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- permission to access the user's approximate location -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -15,10 +17,14 @@
         android:theme="@style/Theme.TrafficScotlandCW1">
         <meta-data
             android:name="com.example.s2366848.CLIENT_ID"
-            android:value="${CLIENT_ID}"/>
+            android:value="${CLIENT_ID}" />
         <meta-data
             android:name="com.example.s2366848.CLIENT_KEY"
-            android:value="${CLIENT_KEY}"/>
+            android:value="${CLIENT_KEY}" />
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -29,6 +35,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".MapsActivity"
+            android:exported="false"
+            android:label="@string/title_activity_maps"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

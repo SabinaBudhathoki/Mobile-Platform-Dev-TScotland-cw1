@@ -6,9 +6,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:padding="12dp">
+    android:background="#F5F2FA"
+    android:padding="8dp">
 
-    <!-- Left section containing the application controls -->
+    <!-- Left section containing application controls -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
@@ -16,55 +17,128 @@
         android:orientation="vertical"
         android:paddingEnd="12dp">
 
+        <!-- Application header -->
         <TextView
             android:id="@+id/salutation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Traffic Scotland"
             android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:textColor="#6B50A5" />
 
-        <!-- Refresh traffic information -->
-        <Button
-            android:id="@+id/startButton"
+        <!-- Traffic overview and refresh -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Refresh traffic data" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
 
-        <!-- Search by road name -->
-        <EditText
-            android:id="@+id/searchRoadInput"
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Traffic overview"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:textColor="#382B50" />
+
+            <Button
+                android:id="@+id/startButton"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:minHeight="0dp"
+                android:text="Refresh"
+                android:textSize="11sp"
+                android:drawableLeft="@drawable/ic_refresh"
+                android:drawableTint="#FFFFFF"
+                android:drawablePadding="5dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:backgroundTint="#6B50A5"
+                android:textColor="#FFFFFF" />
+
+        </LinearLayout>
+
+        <!-- Road search -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter road name to search"
-            android:inputType="text" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <Button
-            android:id="@+id/searchButton"
+            <EditText
+                android:id="@+id/searchRoadInput"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:hint="Enter road name"
+                android:inputType="text"
+                android:singleLine="true"
+                android:textSize="13sp"
+                android:backgroundTint="#6B50A5" />
+
+            <Button
+                android:id="@+id/searchButton"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:text="Search"
+                android:textSize="12sp"
+                android:backgroundTint="#6B50A5"
+                android:textColor="#FFFFFF" />
+
+        </LinearLayout>
+
+        <!-- Map and nearby shortcuts -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Search" />
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
 
-        <!-- Find nearby traffic situations -->
-        <Button
-            android:id="@+id/nearbyButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Find Nearby Situations" />
+            <Button
+                android:id="@+id/mapButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="3dp"
+                android:text="Traffic Map"
+                android:textSize="11sp"
+                android:drawableLeft="@drawable/ic_map"
+                android:drawableTint="#493B66"
+                android:drawablePadding="4dp"
+                android:gravity="center"
+                android:backgroundTint="#D8C9ED"
+                android:textColor="#493B66" />
 
-        <!-- Open traffic map -->
-        <Button
-            android:id="@+id/mapButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="View Traffic Map" />
+            <Button
+                android:id="@+id/nearbyButton"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="3dp"
+                android:text="Find Nearby"
+                android:textSize="11sp"
+                android:drawableLeft="@drawable/ic_nearby"
+                android:drawableTint="#493B66"
+                android:drawablePadding="4dp"
+                android:gravity="center"
+                android:backgroundTint="#D8C9ED"
+                android:textColor="#493B66" />
 
+        </LinearLayout>
+
+        <!-- Data acknowledgement -->
         <TextView
             android:id="@+id/acknowledgement"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Contains Traffic Scotland data"
-            android:textSize="12sp" />
+            android:textSize="11sp"
+            android:textColor="#756B87"
+            android:paddingTop="6dp" />
 
     </LinearLayout>
 
@@ -88,15 +162,30 @@
                 android:layout_height="wrap_content"
                 android:text="UNPLANNED INCIDENTS"
                 android:textStyle="bold"
-                android:textSize="18sp"
-                android:paddingTop="8dp"
-                android:paddingBottom="4dp" />
+                android:textSize="15sp"
+                android:textColor="#382B50"
+                android:padding="8dp"
+                android:background="#E9E1F5" />
+
+            <TextView
+                android:id="@+id/noIncidentsMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No matching incidents found"
+                android:textColor="#756B87"
+                android:gravity="center"
+                android:padding="12dp"
+                android:visibility="gone" />
 
             <ListView
                 android:id="@+id/incidentsList"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1" />
+                android:layout_weight="1"
+                android:background="#FFFFFF"
+                android:divider="#E9E1F5"
+                android:dividerHeight="1dp"
+                android:padding="4dp" />
 
         </LinearLayout>
 
@@ -113,15 +202,30 @@
                 android:layout_height="wrap_content"
                 android:text="CURRENT ROADWORKS"
                 android:textStyle="bold"
-                android:textSize="18sp"
-                android:paddingTop="8dp"
-                android:paddingBottom="4dp" />
+                android:textSize="15sp"
+                android:textColor="#382B50"
+                android:padding="8dp"
+                android:background="#E9E1F5" />
+
+            <TextView
+                android:id="@+id/noRoadworksMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No matching roadworks found"
+                android:textColor="#756B87"
+                android:gravity="center"
+                android:padding="12dp"
+                android:visibility="gone" />
 
             <ListView
                 android:id="@+id/roadworksList"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1" />
+                android:layout_weight="1"
+                android:background="#FFFFFF"
+                android:divider="#E9E1F5"
+                android:dividerHeight="1dp"
+                android:padding="4dp" />
 
         </LinearLayout>
 

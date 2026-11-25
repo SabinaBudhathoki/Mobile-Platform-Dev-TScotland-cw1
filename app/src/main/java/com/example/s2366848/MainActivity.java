@@ -62,6 +62,9 @@ import java.util.Comparator;
 public class MainActivity extends AppCompatActivity implements OnClickListener {
     private ListView incidentsList;
     private ListView roadworksList;
+    // Messages displayed when search results are empty
+    private TextView noIncidentsMessage;
+    private TextView noRoadworksMessage;
     private Button startButton;
 
     // Stores the search box and search button
@@ -136,6 +139,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Connect the layout views to the Java variables
         incidentsList = findViewById(R.id.incidentsList);
         roadworksList = findViewById(R.id.roadworksList);
+        noIncidentsMessage = findViewById(R.id.noIncidentsMessage);
+        noRoadworksMessage = findViewById(R.id.noRoadworksMessage);
         startButton = findViewById(R.id.startButton);
 
         // Connect the search box and button to the layout
@@ -149,33 +154,116 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         mapButton = findViewById(R.id.mapButton);
 
 
+
+        // Open all traffic locations directly and allow selection after a search
         mapButton.setOnClickListener(v -> {
 
-            // Create lists to hold traffic marker information
-            ArrayList<String> markerTitles = new ArrayList<>();
-            ArrayList<String> markerLatitudes = new ArrayList<>();
-            ArrayList<String> markerLongitudes = new ArrayList<>();
+            ArrayList<Situation> situationsToChoose = new ArrayList<>();
 
-            // Add incident locations
-            for (Situation situation : incidentSituations) {
-                addSituationToMap(situation, markerTitles,
-                        markerLatitudes, markerLongitudes);
+            String searchText = searchRoadInput.getText().toString().trim();
+
+            // If a road has been searched, use the matching results
+            if (!searchText.isEmpty()) {
+
+                situationsToChoose.addAll(filteredIncidentSituations);
+                situationsToChoose.addAll(filteredRoadworkSituations);
+
+                if (situationsToChoose.isEmpty()) {
+                    Toast.makeText(this, "No matching situations found",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // Prepare checkbox labels
+                String[] labels = new String[situationsToChoose.size()];
+                boolean[] selected = new boolean[situationsToChoose.size()];
+
+                for (int i = 0; i < situationsToChoose.size(); i++) {
+                    Situation situation = situationsToChoose.get(i);
+                    labels[i] = situation.getType() + " - "
+                            + situation.getRoadName();
+                }
+
+                // Allow users to select multiple matching situations
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Select situations to display")
+                        .setMultiChoiceItems(labels, selected,
+                                (dialog, which, isChecked) ->
+                                        selected[which] = isChecked)
+                        .setPositiveButton("Show on Map", (dialog, which) -> {
+
+                            ArrayList<String> markerTitles = new ArrayList<>();
+                            ArrayList<String> markerLatitudes = new ArrayList<>();
+                            ArrayList<String> markerLongitudes = new ArrayList<>();
+
+                            for (int i = 0; i < situationsToChoose.size(); i++) {
+                                if (selected[i]) {
+                                    addSituationToMap(
+                                            situationsToChoose.get(i),
+                                            markerTitles,
+                                            markerLatitudes,
+                                            markerLongitudes
+                                    );
+                                }
+                            }
+
+                            if (markerTitles.isEmpty()) {
+                                Toast.makeText(this,
+                                        "Please select at least one valid location",
+                                        Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+
+                            Intent intent = new Intent(
+                                    MainActivity.this, MapsActivity.class);
+
+                            intent.putStringArrayListExtra(
+                                    "markerTitles", markerTitles);
+                            intent.putStringArrayListExtra(
+                                    "markerLatitudes", markerLatitudes);
+                            intent.putStringArrayListExtra(
+                                    "markerLongitudes", markerLongitudes);
+
+                            startActivity(intent);
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+
+            } else {
+
+                // No road search: show all incidents and roadworks on the map
+                situationsToChoose.addAll(incidentSituations);
+                situationsToChoose.addAll(roadworkSituations);
+
+                ArrayList<String> markerTitles = new ArrayList<>();
+                ArrayList<String> markerLatitudes = new ArrayList<>();
+                ArrayList<String> markerLongitudes = new ArrayList<>();
+
+                for (Situation situation : situationsToChoose) {
+                    addSituationToMap(
+                            situation,
+                            markerTitles,
+                            markerLatitudes,
+                            markerLongitudes
+                    );
+                }
+
+                if (markerTitles.isEmpty()) {
+                    Toast.makeText(this, "No valid traffic locations available",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+
+                intent.putStringArrayListExtra("markerTitles", markerTitles);
+                intent.putStringArrayListExtra("markerLatitudes", markerLatitudes);
+                intent.putStringArrayListExtra("markerLongitudes", markerLongitudes);
+
+                startActivity(intent);
             }
-
-            // Add roadwork locations
-            for (Situation situation : roadworkSituations) {
-                addSituationToMap(situation, markerTitles,
-                        markerLatitudes, markerLongitudes);
-            }
-
-            // Open the map and pass the traffic information
-            Intent intent = new Intent(MainActivity.this, MapsActivity.class);
-            intent.putStringArrayListExtra("markerTitles", markerTitles);
-            intent.putStringArrayListExtra("markerLatitudes", markerLatitudes);
-            intent.putStringArrayListExtra("markerLongitudes", markerLongitudes);
-
-            startActivity(intent);
         });
+
 
         // Open the correct incident when a list item is selected
         incidentsList.setOnItemClickListener((parent, view, position, id) -> {
@@ -454,6 +542,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                         "\n\nStart time: " + situation.getStartTime() +
                         "\n\nEnd time: " + situation.getEndTime() +
                         "\n\nValidity: " + situation.getValidityStatus() +
+                        "\n\nImpact: " + situation.getImpact() +
                         "\n\nDelay: " + situation.getDelay() +
                         "\n\nLatitude: " + situation.getLatitude() +
                         "\nLongitude: " + situation.getLongitude();
@@ -464,6 +553,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 .setPositiveButton("Close", null)
                 .show();
     }
+
 
     // Search incidents and roadworks using the entered road name
     private void searchSituations() {
@@ -504,19 +594,40 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             }
         }
 
-        // Display the matching results
+        // Display matching incidents
         incidentsList.setAdapter(new ArrayAdapter<>(
                 MainActivity.this,
                 android.R.layout.simple_list_item_1,
                 incidentDescriptions
         ));
 
+        // Display matching roadworks
         roadworksList.setAdapter(new ArrayAdapter<>(
                 MainActivity.this,
                 android.R.layout.simple_list_item_1,
                 roadworkDescriptions
         ));
+
+        // Show a message when no incidents match
+        noIncidentsMessage.setVisibility(
+                filteredIncidentSituations.isEmpty() ? View.VISIBLE : View.GONE
+        );
+
+        // Show a message when no roadworks match
+        noRoadworksMessage.setVisibility(
+                filteredRoadworkSituations.isEmpty() ? View.VISIBLE : View.GONE
+        );
+        // Hide the list when there are no matching incidents
+        incidentsList.setVisibility(
+                filteredIncidentSituations.isEmpty() ? View.GONE : View.VISIBLE
+        );
+
+        // Hide the list when there are no matching roadworks
+        roadworksList.setVisibility(
+                filteredRoadworkSituations.isEmpty() ? View.GONE : View.VISIBLE
+        );
     }
+
     // Find traffic situations close to the user's location
     private void findNearbySituations() {
 

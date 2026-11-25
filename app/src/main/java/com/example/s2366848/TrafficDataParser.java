@@ -34,6 +34,7 @@ public class TrafficDataParser {
         String endTime = "Unknown";
         String delay = "Not specified";
         String validityStatus = "Unknown";
+        StringBuilder impact = new StringBuilder();
 
         boolean insideComment = false;
         boolean insideLocationName = false;
@@ -56,6 +57,7 @@ public class TrafficDataParser {
                     endTime = "Unknown";
                     delay = "Not specified";
                     validityStatus = "Unknown";
+                    impact = new StringBuilder();
                 }
 
                 if ("situationRecord".equals(tag)) {
@@ -124,6 +126,32 @@ public class TrafficDataParser {
                     delay = xpp.nextText().trim();
                 }
 
+                // Extract useful traffic impact information
+                if ("impactOnTraffic".equals(tag)) {
+                    addImpactDetail(impact, "Impact on traffic",
+                            xpp.nextText().trim());
+                }
+
+                if ("trafficFlowCharacteristics".equals(tag)) {
+                    addImpactDetail(impact, "Traffic flow",
+                            xpp.nextText().trim());
+                }
+
+                if ("numberOfLanesRestricted".equals(tag)) {
+                    addImpactDetail(impact, "Restricted lanes",
+                            xpp.nextText().trim());
+                }
+
+                if ("numberOfOperationalLanes".equals(tag)) {
+                    addImpactDetail(impact, "Operational lanes",
+                            xpp.nextText().trim());
+                }
+
+                if ("delayTimeValue".equals(tag)) {
+                    addImpactDetail(impact, "Delay time",
+                            xpp.nextText().trim());
+                }
+
             } else if (eventType == XmlPullParser.END_TAG) {
 
                 String tag = xpp.getName();
@@ -140,6 +168,10 @@ public class TrafficDataParser {
 
                 if ("situation".equals(tag)) {
 
+                    String impactText = impact.length() > 0
+                            ? impact.toString()
+                            : "Not specified";
+
                     situations.add(new Situation(
                             type,
                             comment,
@@ -149,7 +181,8 @@ public class TrafficDataParser {
                             startTime,
                             endTime,
                             delay,
-                            validityStatus
+                            validityStatus,
+                            impactText
                     ));
                 }
             }
@@ -158,5 +191,17 @@ public class TrafficDataParser {
         }
 
         return situations;
+    }
+
+    // Add an impact detail only when the XML provides a value
+    private void addImpactDetail(StringBuilder impact,
+                                 String label, String value) {
+        if (value != null && !value.isEmpty()) {
+            if (impact.length() > 0) {
+                impact.append("\n");
+            }
+
+            impact.append(label).append(": ").append(value);
+        }
     }
 }

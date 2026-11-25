@@ -13,12 +13,14 @@ public class Situation {
     private String endTime;
     private String delay;
     private String validityStatus;
+    private String impact;
 
     // Store all information about an individual traffic situation
     public Situation(String type, String comment, String roadName,
                      String latitude, String longitude,
                      String startTime, String endTime,
-                     String delay, String validityStatus) {
+                     String delay, String validityStatus,
+                     String impact) {
 
         this.type = type;
         this.comment = comment;
@@ -29,6 +31,7 @@ public class Situation {
         this.endTime = endTime;
         this.delay = delay;
         this.validityStatus = validityStatus;
+        this.impact = impact;
     }
 
     public String getType() {
@@ -65,5 +68,10 @@ public class Situation {
 
     public String getValidityStatus() {
         return validityStatus;
+    }
+
+    // Return the impact information
+    public String getImpact() {
+        return impact;
     }
 }

@@ -857,6 +857,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     private final Runnable automaticUpdate = new Runnable() {
         @Override
         public void run() {
+            Log.d("TrafficUpdate", "Automatic update triggered");
             startProgress();
 
             // Schedule the next update after one hour

@@ -1,3 +1,4 @@
+
 package com.example.s2366848;
 
 // Stores information about an individual traffic situation.
@@ -9,11 +10,15 @@ public class Situation {
     private String latitude;
     private String longitude;
     private String startTime;
+    private String endTime;
     private String delay;
+    private String validityStatus;
 
+    // Store all information about an individual traffic situation
     public Situation(String type, String comment, String roadName,
                      String latitude, String longitude,
-                     String startTime, String delay) {
+                     String startTime, String endTime,
+                     String delay, String validityStatus) {
 
         this.type = type;
         this.comment = comment;
@@ -21,7 +26,9 @@ public class Situation {
         this.latitude = latitude;
         this.longitude = longitude;
         this.startTime = startTime;
+        this.endTime = endTime;
         this.delay = delay;
+        this.validityStatus = validityStatus;
     }
 
     public String getType() {
@@ -48,7 +55,15 @@ public class Situation {
         return startTime;
     }
 
+    public String getEndTime() {
+        return endTime;
+    }
+
     public String getDelay() {
         return delay;
+    }
+
+    public String getValidityStatus() {
+        return validityStatus;
     }
 }

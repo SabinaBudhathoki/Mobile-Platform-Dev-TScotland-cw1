@@ -69,6 +69,9 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     private Button searchButton;
     private ArrayList<Situation> incidentSituations = new ArrayList<>();
     private ArrayList<Situation> roadworkSituations = new ArrayList<>();
+    // Store situations currently displayed after searching
+    private ArrayList<Situation> filteredIncidentSituations = new ArrayList<>();
+    private ArrayList<Situation> filteredRoadworkSituations = new ArrayList<>();
 
     //stores the user's current location
     private Location userLocation;
@@ -174,16 +177,29 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             startActivity(intent);
         });
 
-
-        // Allow users to select an individual incident
+        // Open the correct incident when a list item is selected
         incidentsList.setOnItemClickListener((parent, view, position, id) -> {
-            Situation selectedSituation = incidentSituations.get(position);
+            Situation selectedSituation;
+
+            if (!filteredIncidentSituations.isEmpty()) {
+                selectedSituation = filteredIncidentSituations.get(position);
+            } else {
+                selectedSituation = incidentSituations.get(position);
+            }
+
             showSituationDetails(selectedSituation);
         });
 
-        // Allow users to select an individual roadwork
+        // Open the correct roadwork when a list item is selected
         roadworksList.setOnItemClickListener((parent, view, position, id) -> {
-            Situation selectedSituation = roadworkSituations.get(position);
+            Situation selectedSituation;
+
+            if (!filteredRoadworkSituations.isEmpty()) {
+                selectedSituation = filteredRoadworkSituations.get(position);
+            } else {
+                selectedSituation = roadworkSituations.get(position);
+            }
+
             showSituationDetails(selectedSituation);
         });
 
@@ -373,11 +389,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 Log.e("Parsing", "Could not parse current roadworks", e);
             }
 
-            //update the incident and roadwork lists with the parsed situation descriptions
-            MainActivity.this.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-
+            // Update the lists on the main UI thread
+            updateHandler.post(() -> {
                     ArrayList<String> incidentDescriptions = new ArrayList<>();
                     ArrayList<String> roadworkDescriptions = new ArrayList<>();
 
@@ -387,7 +400,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                                         situation.getComment()
                         );
                     }
-
                     for (Situation situation : roadworkSituations) {
                         roadworkDescriptions.add(
                                 situation.getType() + "\n" +
@@ -427,19 +439,21 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                     incidentsList.setAdapter(incidentAdapter);
                     roadworksList.setAdapter(roadworkAdapter);
-                }
-            });
+                });
         }
 
     }
     // Display the selected situation's details in a dialog
-    private void showSituationDetails(Situation situation) {
 
+    // Display all available details of the selected traffic situation
+    private void showSituationDetails(Situation situation) {
         String details =
                 "Type: " + situation.getType() +
                         "\n\nDescription: " + situation.getComment() +
                         "\n\nRoad: " + situation.getRoadName() +
                         "\n\nStart time: " + situation.getStartTime() +
+                        "\n\nEnd time: " + situation.getEndTime() +
+                        "\n\nValidity: " + situation.getValidityStatus() +
                         "\n\nDelay: " + situation.getDelay() +
                         "\n\nLatitude: " + situation.getLatitude() +
                         "\nLongitude: " + situation.getLongitude();
@@ -450,48 +464,57 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 .setPositiveButton("Close", null)
                 .show();
     }
+
     // Search incidents and roadworks using the entered road name
     private void searchSituations() {
 
         String searchText = searchRoadInput.getText().toString()
                 .trim().toLowerCase();
 
-        ArrayList<String> filteredIncidents = new ArrayList<>();
-        ArrayList<String> filteredRoadworks = new ArrayList<>();
+        // Clear previous search results
+        filteredIncidentSituations.clear();
+        filteredRoadworkSituations.clear();
 
-        // Find incidents matching the road name
+        ArrayList<String> incidentDescriptions = new ArrayList<>();
+        ArrayList<String> roadworkDescriptions = new ArrayList<>();
+
+        // Find matching incidents
         for (Situation situation : incidentSituations) {
             if (situation.getRoadName() != null &&
                     situation.getRoadName().toLowerCase().contains(searchText)) {
 
-                filteredIncidents.add(
+                filteredIncidentSituations.add(situation);
+
+                incidentDescriptions.add(
                         situation.getType() + "\n" + situation.getComment()
                 );
             }
         }
 
-        // Find roadworks matching the road name
+        // Find matching roadworks
         for (Situation situation : roadworkSituations) {
             if (situation.getRoadName() != null &&
                     situation.getRoadName().toLowerCase().contains(searchText)) {
 
-                filteredRoadworks.add(
+                filteredRoadworkSituations.add(situation);
+
+                roadworkDescriptions.add(
                         situation.getType() + "\n" + situation.getComment()
                 );
             }
         }
 
-        // Display the matching results in both lists
+        // Display the matching results
         incidentsList.setAdapter(new ArrayAdapter<>(
                 MainActivity.this,
                 android.R.layout.simple_list_item_1,
-                filteredIncidents
+                incidentDescriptions
         ));
 
         roadworksList.setAdapter(new ArrayAdapter<>(
                 MainActivity.this,
                 android.R.layout.simple_list_item_1,
-                filteredRoadworks
+                roadworkDescriptions
         ));
     }
     // Find traffic situations close to the user's location

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Landscape layout for the Traffic Scotland application -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="12dp">
+
+    <!-- Left section containing the application controls -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingEnd="12dp">
+
+        <TextView
+            android:id="@+id/salutation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Traffic Scotland"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Refresh traffic information -->
+        <Button
+            android:id="@+id/startButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Refresh traffic data" />
+
+        <!-- Search by road name -->
+        <EditText
+            android:id="@+id/searchRoadInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter road name to search"
+            android:inputType="text" />
+
+        <Button
+            android:id="@+id/searchButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Search" />
+
+        <!-- Find nearby traffic situations -->
+        <Button
+            android:id="@+id/nearbyButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Find Nearby Situations" />
+
+        <!-- Open traffic map -->
+        <Button
+            android:id="@+id/mapButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="View Traffic Map" />
+
+        <TextView
+            android:id="@+id/acknowledgement"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Contains Traffic Scotland data"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <!-- Right section containing both traffic lists -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:orientation="horizontal">
+
+        <!-- Unplanned incidents column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="UNPLANNED INCIDENTS"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp" />
+
+            <ListView
+                android:id="@+id/incidentsList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+        </LinearLayout>
+
+        <!-- Current roadworks column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="6dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="CURRENT ROADWORKS"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp" />
+
+            <ListView
+                android:id="@+id/roadworksList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

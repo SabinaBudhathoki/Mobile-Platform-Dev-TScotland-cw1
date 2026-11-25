@@ -1,3 +1,4 @@
+
 package com.example.s2366848;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -30,9 +31,10 @@ public class TrafficDataParser {
         String latitude = "";
         String longitude = "";
         String startTime = "Unknown";
+        String endTime = "Unknown";
         String delay = "Not specified";
+        String validityStatus = "Unknown";
 
-        boolean insideSituation = false;
         boolean insideComment = false;
         boolean insideLocationName = false;
 
@@ -45,15 +47,15 @@ public class TrafficDataParser {
                 String tag = xpp.getName();
 
                 if ("situation".equals(tag)) {
-                    insideSituation = true;
-
                     type = "Unknown";
                     comment = "";
                     roadName = "Unknown";
                     latitude = "";
                     longitude = "";
                     startTime = "Unknown";
+                    endTime = "Unknown";
                     delay = "Not specified";
+                    validityStatus = "Unknown";
                 }
 
                 if ("situationRecord".equals(tag)) {
@@ -110,6 +112,14 @@ public class TrafficDataParser {
                     startTime = xpp.nextText().trim();
                 }
 
+                if ("overallEndTime".equals(tag)) {
+                    endTime = xpp.nextText().trim();
+                }
+
+                if ("validityStatus".equals(tag)) {
+                    validityStatus = xpp.nextText().trim();
+                }
+
                 if ("delaysType".equals(tag)) {
                     delay = xpp.nextText().trim();
                 }
@@ -137,10 +147,10 @@ public class TrafficDataParser {
                             latitude,
                             longitude,
                             startTime,
-                            delay
+                            endTime,
+                            delay,
+                            validityStatus
                     ));
-
-                    insideSituation = false;
                 }
             }
 
